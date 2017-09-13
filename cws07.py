@@ -2,7 +2,7 @@ import re
 from tqdm import tqdm
 import hashlib
 
-db = pymongo.MongoClient().weixin.text_articles
+#db = pymongo.MongoClient().weixin.text_articles
 md5 = lambda s: hashlib.md5(s).hexdigest()
 def texts():
     texts_set = set()

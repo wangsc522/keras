@@ -1,39 +1,28 @@
+# -*- coding: utf-8 -*-
 import re
-from tqdm import tqdm
+
 import hashlib
 
 #db = pymongo.MongoClient().weixin.text_articles
-md5 = lambda s: hashlib.md5(s).hexdigest()
-def texts():
+
+def getText():
+    import os, codecs
     texts_set = set()
-    for a in tqdm(db.find(no_cursor_timeout=True).limit(3000000)):
-        if md5(a['text'].encode('utf-8')) in texts_set:
-            continue
-        else:
-            texts_set.add(md5(a['text'].encode('utf-8')))
-            for t in re.split(u'[^\u4e00-\u9fa50-9a-zA-Z]+', a['text']):
-                if t:
-                    yield t
-    print ('total='%len(texts_set))
-
-from collections import defaultdict
-import numpy as np
-
-n = 4
-min_count = 128
-ngrams = defaultdict(int)
-
-for t in texts():
-    for i in range(len(t)):
-        for j in range(1, n+1):
-            if i+j <= len(t):
-                ngrams[t[i:i+j]] += 1
-
-ngrams = {i:j for i,j in ngrams.iteritems() if j >= min_count}
-total = 1.*sum([j for i,j in ngrams.iteritems() if len(i) == 1])
-
-min_proba = {2:5, 3:25, 4:125}
-
+    fileNames = os.listdir(dataMainDir)    
+    for fileName in fileNames:
+        with codecs.open("%s/%s" % (dataMainDir,fileName) ,"r",  'UTF-8') as f:
+            doc=f.readlines()
+            for a in doc:
+                
+                if md5(a.encode('utf-8')) in texts_set:
+                    continue
+                else:
+                    texts_set.add(md5(a.encode('utf-8')))
+                    for t in re.split(u'[^\u4e00-\u9fa50-9a-zA-Z]+', a):
+                        if t:
+                            yield t
+            print ('total=%d'%len(texts_set))
+            
 def is_keep(s, min_proba):
     if len(s) >= 2:
         score = min([total*ngrams[s]/(ngrams[s[:i+1]]*ngrams[s[i+1:]]) for i in range(len(s)-1)])
@@ -41,8 +30,6 @@ def is_keep(s, min_proba):
             return True
     else:
         return False
-
-ngrams_ = set(i for i,j in ngrams.iteritems() if is_keep(i, min_proba))
 
 def cut(s):
     r = np.array([0]*(len(s)-1))
@@ -58,13 +45,6 @@ def cut(s):
             w.append(s[i])
     return w
 
-words = defaultdict(int)
-for t in texts():
-    for i in cut(t):
-        words[i] += 1
-
-words = {i:j for i,j in words.iteritems() if j >= min_count}
-
 def is_real(s):
     if len(s) >= 3:
         for i in range(3, n+1):
@@ -75,6 +55,54 @@ def is_real(s):
     else:
         return True
 
-w = {i:j for i,j in words.iteritems() if is_real(i)}
-
-	
+if __name__ == '__main__':
+    
+    import sys,os
+    if len(sys.argv) < 2: 
+        print ("Usage:", sys.argv[0], "目錄")
+        sys.exit(1)       
+    else:
+        dataMainDir = sys.argv[1]
+    
+    md5 = lambda s: hashlib.md5(s).hexdigest()
+    
+    from collections import defaultdict
+    import numpy as np
+    
+    n = 4
+    #min_count = 128
+    min_count = 5
+    ngrams = defaultdict(int)
+    
+    for t in getText():
+        for i in range(len(t)):
+            for j in range(1, n+1):
+                if i+j <= len(t):
+                    
+                    ngrams[t[i:i+j]] += 1
+    
+    ngrams = {i:j for i,j in ngrams.items() if j >= min_count}
+    total = 1.*sum([j for i,j in ngrams.items() if len(i) == 1])
+    #print(ngrams)
+    min_proba = {2:5, 3:25, 4:125}
+    
+    
+    ngrams_ = set(i for i,j in ngrams.items() if is_keep(i, min_proba))
+    
+    #print(ngrams)
+    words = defaultdict(int)
+    
+    
+    
+    
+    for t in getText():
+        
+        for i in cut(t):
+            words[i] += 1
+    #print(words)
+    words = {i:j for i,j in words.items() if j >= min_count}
+    
+    w = {i:j for i,j in words.items() if is_real(i)}
+    print(w)
+    
+        
